@@ -1,0 +1,19 @@
+[toolchain]
+package_manager = "yarn"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+shopchain_escrow = "EpCUmJZJBad5utkWnhA7UgzQEVcPzvk738MxyP9b2NSR"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/shopchain-dev.json"
+
+[scripts]
+test = "yarn run mocha -t 1000000 tests/"

@@ -1,4 +1,4 @@
-# ShopChain — AI-Powered Safe Deals with Solana Escrow
+# ShopChain — Blockchain-Powered Safe Deals 
 
 ![ShopChain Walkthrough](walkthrough.gif)
 

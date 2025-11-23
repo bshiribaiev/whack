@@ -185,17 +185,19 @@ export default function App() {
 
   // ---------------- ESCROW ----------------
   if (screen === "deal") {
+    const analysis = buildMockAnalysis(); // reuse your existing function
+  
     return (
       <div className="relative min-h-screen flex flex-col text-white">
         <BackgroundFX />
         <Escrow
           onBack={() => setScreen("risk")}
           onFinish={() => setScreen("status")}
+          analysis={analysis}
         />
       </div>
     );
   }
-
   // ---------------- DEAL STATUS ----------------
   if (screen === "status") {
     return (

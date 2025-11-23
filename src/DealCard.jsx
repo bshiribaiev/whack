@@ -279,15 +279,15 @@ export default function DealCard({
         <button
           onClick={primaryOnClick}
           disabled={primaryDisabled}
-          className={`px-7 py-2.5 rounded-xl text-sm font-semibold shadow-lg transition ${
-            stage === "waiting"
-              ? "bg-sky-500 text-white hover:bg-sky-400"
-              : stage === "funded"
-              ? "bg-indigo-500 text-white hover:bg-indigo-400"
-              : stage === "shipped"
-              ? "bg-emerald-500 text-white hover:bg-emerald-400"
-              : "bg-slate-700 text-slate-500 cursor-not-allowed"
-          }`}
+          className={`w-40 text-center py-2.5 rounded-xl text-sm font-semibold shadow-lg transition ${
+             stage === "waiting"
+                ? "bg-sky-500 text-white hover:bg-sky-400"
+               : stage === "funded"
+               ? "bg-indigo-500 text-white hover:bg-indigo-400"
+                : stage === "shipped"
+               ? "bg-emerald-500 text-white hover:bg-emerald-400"
+                : "bg-slate-700 text-slate-500 cursor-not-allowed"
+            }`}
         >
           {primaryLabel}
         </button>

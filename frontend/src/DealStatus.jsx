@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -7,6 +7,9 @@ import {
   Package,
   Wallet,
 } from "lucide-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { Transaction } from "@solana/web3.js";
+import { fundEscrowApi, releaseEscrowApi } from "./api.js";
 import DealCard from "./DealCard.jsx";
 
 function StatusRow({ icon: Icon, label, sub, done, delay }) {
@@ -64,12 +67,77 @@ function LabelWithPill({ label, pill, color }) {
   );
 }
 
-export default function DealStatus({ onBack }) {
-  const [stage, setStage] = useState("waiting");
+export default function DealStatus({ onBack, dealData }) {
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useWallet();
+  const [stage, setStage] = useState("waiting"); // Start at waiting, will be "funded" after create_deal
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Update stage when dealData changes
+  useEffect(() => {
+    if (dealData && stage === "waiting") {
+      setStage("waiting"); // User just created deal, needs to fund it
+    }
+  }, [dealData, stage]);
 
-  const handleFund = () => setStage("funded");
+  const handleFund = async () => {
+    if (!dealData || !publicKey) {
+      setError("Missing deal data or wallet not connected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { tx } = await fundEscrowApi({
+        buyerPubkey: dealData.buyer,
+        sellerPubkey: dealData.seller,
+        dealId: dealData.dealId,
+      });
+
+      const transaction = Transaction.from(Buffer.from(tx, "base64"));
+      const sig = await sendTransaction(transaction, connection);
+      console.log("✅ Fund escrow tx:", sig);
+      
+      setStage("funded");
+    } catch (e) {
+      console.error("❌ Fund escrow failed:", e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleMarkShipped = () => setStage("shipped");
-  const handleRelease = () => setStage("released");
+  
+  const handleRelease = async () => {
+    if (!dealData || !publicKey) {
+      setError("Missing deal data or wallet not connected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { tx } = await releaseEscrowApi({
+        buyerPubkey: dealData.buyer,
+        sellerPubkey: dealData.seller,
+        dealId: dealData.dealId,
+      });
+
+      const transaction = Transaction.from(Buffer.from(tx, "base64"));
+      const sig = await sendTransaction(transaction, connection);
+      console.log("✅ Release escrow tx:", sig);
+      
+      setStage("released");
+    } catch (e) {
+      console.error("❌ Release escrow failed:", e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const buyerStatusByStage = {
     waiting: { status: "Waiting to Fund", goods: "—", goodsColor: "amber" },
@@ -173,6 +241,9 @@ export default function DealStatus({ onBack }) {
           onFund={handleFund}
           onMarkShipped={handleMarkShipped}
           onRelease={handleRelease}
+          buyerAddress={dealData?.buyer}
+          sellerAddress={dealData?.seller}
+          amountSol={dealData?.amountSol || 0.1}
         />
 
         {/* Buyer / Seller Panels */}
@@ -245,9 +316,13 @@ export default function DealStatus({ onBack }) {
           />
         </div>
 
-        <p className="text-[11px] text-slate-500 text-center">
-          Demo only – backend will replace buttons with real Solana transactions.
-        </p>
+        {error && (
+          <p className="mt-4 text-xs text-red-400 text-center">{error}</p>
+        )}
+        
+        {loading && (
+          <p className="mt-2 text-xs text-amber-400 text-center">Processing transaction...</p>
+        )}
       </motion.div>
     </div>
   );

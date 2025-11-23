@@ -8,12 +8,13 @@ pub mod shopchain_escrow {
     use super::*;
 
     /// Create a new deal and its escrow account 
-    pub fn create_deal(ctx: Context<CreateDeal>, amount: u64) -> Result<()> {
+    pub fn create_deal(ctx: Context<CreateDeal>, amount: u64, deal_id: u64) -> Result<()> {
         let deal = &mut ctx.accounts.deal;
 
         deal.buyer = ctx.accounts.buyer.key();
         deal.seller = ctx.accounts.seller.key();
         deal.amount = amount;
+        deal.deal_id = deal_id;
         deal.is_funded = false;
         deal.is_released = false;
         deal.bump = ctx.bumps.deal;
@@ -87,6 +88,7 @@ pub mod shopchain_escrow {
 }
 
 #[derive(Accounts)]
+#[instruction(amount: u64, deal_id: u64)]
 pub struct CreateDeal<'info> {
 
     /// Payer + buyer (for now, same person).
@@ -101,7 +103,7 @@ pub struct CreateDeal<'info> {
         init,
         payer = buyer,
         space = 8 + Deal::LEN,
-        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref()],
+        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref(), &deal_id.to_le_bytes()],
         bump
     )]
     pub deal: Account<'info, Deal>,
@@ -121,7 +123,7 @@ pub struct FundEscrow<'info> {
     /// Existing deal PDA
     #[account(
         mut,
-        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref()],
+        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref(), &deal.deal_id.to_le_bytes()],
         bump = deal.bump,
     )]
     pub deal: Account<'info, Deal>,
@@ -143,7 +145,7 @@ pub struct ReleaseEscrow<'info> {
     /// Existing deal PDA
     #[account(
         mut,
-        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref()],
+        seeds = [b"deal", buyer.key().as_ref(), seller.key().as_ref(), &deal.deal_id.to_le_bytes()],
         bump = deal.bump,
     )]
     pub deal: Account<'info, Deal>,
@@ -154,13 +156,14 @@ pub struct Deal {
     pub buyer: Pubkey,
     pub seller: Pubkey,
     pub amount: u64,
+    pub deal_id: u64,
     pub is_funded: bool,
     pub is_released: bool,
     pub bump: u8,
 }
 
 impl Deal {
-    pub const LEN: usize = 32 + 32 + 8 + 1 + 1 + 1;
+    pub const LEN: usize = 32 + 32 + 8 + 8 + 1 + 1 + 1; // Added 8 bytes for deal_id
 }
 
 #[error_code]

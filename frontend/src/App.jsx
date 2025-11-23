@@ -31,6 +31,7 @@ function BackgroundFX() {
 export default function App() {
   const [screen, setScreen] = useState("landing");
   const [listingUrl, setListingUrl] = useState("");
+  const [dealData, setDealData] = useState(null); // Store deal info from Escrow
 
   const buildMockAnalysis = () => {
     const riskScore = 45;
@@ -192,7 +193,10 @@ export default function App() {
         <BackgroundFX />
         <Escrow
           onBack={() => setScreen("risk")}
-          onFinish={() => setScreen("status")}
+          onFinish={(data) => {
+            setDealData(data);
+            setScreen("status");
+          }}
           analysis={analysis}
         />
       </div>
@@ -203,7 +207,10 @@ export default function App() {
     return (
       <div className="relative min-h-screen flex flex-col text-white">
         <BackgroundFX />
-        <DealStatus onBack={() => setScreen("landing")} />
+        <DealStatus 
+          onBack={() => setScreen("landing")} 
+          dealData={dealData}
+        />
       </div>
     );
   }

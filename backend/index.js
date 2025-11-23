@@ -28,9 +28,12 @@ const pool = new Pool({
 });
 
 // Helper: derive deal PDA
-function getDealPda(buyerPk, sellerPk) {
+function getDealPda(buyerPk, sellerPk, dealId) {
+  const dealIdBuffer = Buffer.alloc(8);
+  dealIdBuffer.writeBigUInt64LE(BigInt(dealId));
+  
   const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("deal"), buyerPk.toBuffer(), sellerPk.toBuffer()],
+    [Buffer.from("deal"), buyerPk.toBuffer(), sellerPk.toBuffer(), dealIdBuffer],
     PROGRAM_ID
   );
   return pda;
@@ -54,16 +57,17 @@ app.use(express.json());
 // POST /create-deal
 app.post("/create-deal", async (req, res) => {
   try {
-    const { buyerPubkey, sellerPubkey, amountSol, listingUrl, title, riskScore, riskReason, metadata } =
+    const { buyerPubkey, sellerPubkey, amountSol, dealId, listingUrl, title, riskScore, riskReason, metadata } =
       req.body;
     const buyer = new PublicKey(buyerPubkey);
     const seller = new PublicKey(sellerPubkey);
     const amountLamports = new BN(Math.round(amountSol * 1e9)); // SOL -> lamports
+    const dealIdBN = new BN(dealId || Date.now()); // Use timestamp if not provided
 
-    const dealPda = getDealPda(buyer, seller);
+    const dealPda = getDealPda(buyer, seller, dealIdBN.toNumber());
 
     const ix = await program.methods
-      .createDeal(amountLamports)
+      .createDeal(amountLamports, dealIdBN)
       .accounts({
         buyer,
         seller,
@@ -120,10 +124,10 @@ app.post("/create-deal", async (req, res) => {
 // POST /fund-escrow
 app.post("/fund-escrow", async (req, res) => {
   try {
-    const { buyerPubkey, sellerPubkey } = req.body;
+    const { buyerPubkey, sellerPubkey, dealId } = req.body;
     const buyer = new PublicKey(buyerPubkey);
     const seller = new PublicKey(sellerPubkey);
-    const dealPda = getDealPda(buyer, seller);
+    const dealPda = getDealPda(buyer, seller, dealId);
 
     const ix = await program.methods
       .fundEscrow()
@@ -158,10 +162,10 @@ app.post("/fund-escrow", async (req, res) => {
 // POST /release-escrow
 app.post("/release-escrow", async (req, res) => {
   try {
-    const { buyerPubkey, sellerPubkey } = req.body;
+    const { buyerPubkey, sellerPubkey, dealId } = req.body;
     const buyer = new PublicKey(buyerPubkey);
     const seller = new PublicKey(sellerPubkey);
-    const dealPda = getDealPda(buyer, seller);
+    const dealPda = getDealPda(buyer, seller, dealId);
 
     const ix = await program.methods
       .releaseEscrow()

@@ -11,6 +11,9 @@ export default function DealCard({
   onFund,
   onMarkShipped,
   onRelease,
+  buyerAddress,   // Solana address
+  sellerAddress,  // Solana address
+  amountSol = 0.1, // Amount in SOL
 }) {
   const cardRef = useRef(null);
   const buyerRef = useRef(null);
@@ -125,7 +128,7 @@ export default function DealCard({
           Deal card
         </p>
         <div className="text-right">
-          <p className="text-sm font-semibold text-slate-100">$999</p>
+          <p className="text-sm font-semibold text-slate-100">{amountSol} SOL</p>
           <p className="text-[11px] text-slate-400">{escrowLabel}</p>
         </div>
       </div>
@@ -144,7 +147,9 @@ export default function DealCard({
             </div>
           </div>
           <p className="text-xs text-slate-200 mt-1">Buyer</p>
-          <p className="text-[10px] text-slate-500">5Gw8…3d9K</p>
+          <p className="text-[10px] text-slate-500">
+            {buyerAddress ? `${buyerAddress.slice(0, 4)}…${buyerAddress.slice(-4)}` : "5Gw8…3d9K"}
+          </p>
           <div className="mt-4 space-y-1 text-[11px] text-slate-300">
             <div className="flex items-center gap-2">
               <span className="text-slate-400">Status:</span>
@@ -189,7 +194,9 @@ export default function DealCard({
             </div>
           </div>
           <p className="text-xs text-slate-200 mt-1">Seller</p>
-          <p className="text-[10px] text-slate-500">7hN2…8mP1</p>
+          <p className="text-[10px] text-slate-500">
+            {sellerAddress ? `${sellerAddress.slice(0, 4)}…${sellerAddress.slice(-4)}` : "7hN2…8mP1"}
+          </p>
           <div className="mt-4 space-y-1 text-[11px] text-slate-300">
             <div className="flex items-center gap-2">
               <span className="text-slate-400">Status:</span>

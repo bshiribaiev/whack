@@ -7,6 +7,8 @@ const anchor = require("@coral-xyz/anchor");
 const { PublicKey, SystemProgram, Transaction } = require("@solana/web3.js");
 const { Pool } = require("pg");
 const BN = require("bn.js");
+const { chromium } = require("playwright");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // ---- Solana / Anchor setup ----
 // NOTE: Run this server from the Anchor workspace root (`shopchain-escrow`) so
@@ -26,6 +28,10 @@ const pool = new Pool({
   password: process.env.PGPASSWORD,
   ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
 });
+
+// Gemini client (for AI listing analysis)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 // Helper: derive deal PDA
 function getDealPda(buyerPk, sellerPk, dealId) {
@@ -49,10 +55,145 @@ async function buildTx(instruction, payerPubkey) {
   return serialized.toString("base64");
 }
 
+// ---- Helper: scrape + summarize listing page ----
+async function fetchListingSummary(url) {
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-blink-features=AutomationControlled"],
+  });
+
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
+  });
+
+  const page = await context.newPage();
+
+  // Block heavy resources
+  await page.route("**/*", (route) => {
+    const type = route.request().resourceType();
+    if (["image", "font", "media", "stylesheet"].includes(type)) {
+      route.abort();
+    } else {
+      route.continue();
+    }
+  });
+
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await page.waitForLoadState("networkidle");
+
+  // Try to expand "see more" style buttons
+  try {
+    const buttons = await page.locator("div[role='button']").all();
+    for (const btn of buttons) {
+      await btn.evaluate((el) => {
+        const span = [...el.children].find(
+          (c) =>
+            c.tagName === "SPAN" &&
+            c.innerText.trim().toLowerCase() === "see more"
+        );
+        if (span) el.click();
+      });
+    }
+  } catch (_) {
+    // best-effort only
+  }
+
+  // Give the page a moment to settle
+  await page.waitForTimeout(800);
+
+  const visibleText = await page.evaluate(() =>
+    document.body.innerText.replace(/\s+/g, " ").trim()
+  );
+
+  const metaTags = await page.evaluate(() => {
+    const metas = Array.from(
+      document.querySelectorAll("meta[property^='og:']")
+    );
+    const out = {};
+    metas.forEach((m) => {
+      out[m.getAttribute("property")] = m.getAttribute("content") || "";
+    });
+    return out;
+  });
+
+  await browser.close();
+
+  return {
+    visible_text: visibleText,
+    meta_content: metaTags,
+  };
+}
+
+// ---- Helper: call Gemini with summary ----
+async function analyzeWithGemini(summary) {
+  if (!genAI) {
+    throw new Error("Gemini API key (API_KEY or GOOGLE_API_KEY) is not set");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const systemPrompt = `
+You are a product safety & scam risk evaluator.
+Given product details and user feedback, output a structured JSON with:
+
+1. risk_score (integer 0-100, 0 = very safe, 100 = extremely risky)
+2. reasons: short bullet points explaining the risk
+3. advice: what the buyer should do
+4. suggested_questions: follow-up questions the buyer should ask the seller
+5. price: numeric price of the item in USD if possible (infer from the listing text/metadata)
+6. title: short title/summary of the item being sold
+
+Evaluate risk strictly on:
+- misleading or incomplete descriptions
+- suspicious pricing or seller behavior
+- inconsistent or fake reviews
+- signs of scams
+
+Please note that there will be lots of noise in the data, do your best to filter through it.
+
+Respond with pure JSON only, no extra commentary.
+`;
+
+  const contents = systemPrompt + JSON.stringify(summary);
+  const result = await model.generateContent(contents);
+  const text = result.response.text().trim();
+
+  try {
+    // Gemini sometimes wraps JSON in ```json ... ``` fences.
+    let cleaned = text;
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/```json/gi, "").replace(/```/g, "").trim();
+    }
+    return JSON.parse(cleaned);
+  } catch {
+    // Fallback: return raw text so frontend can still show something
+    return { raw_response: text };
+  }
+}
+
 // ---- Express app ----
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ---- AI listing analysis (Playwright + Gemini in Node) ----
+app.post("/analyze-listing", async (req, res) => {
+  const { url } = req.body || {};
+  if (!url) {
+    return res.status(400).json({ error: "Missing 'url' in request body" });
+  }
+
+  try {
+    const summary = await fetchListingSummary(url);
+    const aiResult = await analyzeWithGemini(summary);
+    console.log("AI result:", JSON.stringify(aiResult, null, 2)); // <-- add this
+    return res.json(aiResult);
+  } catch (e) {
+    console.error("analyze-listing error:", e);
+    return res.status(500).json({ error: "Listing analysis failed" });
+  }
+});
 
 // POST /create-deal
 app.post("/create-deal", async (req, res) => {

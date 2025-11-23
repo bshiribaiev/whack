@@ -6,6 +6,7 @@ import { ShieldCheck, Sparkles } from "lucide-react";
 import RiskAnalysis from "./RiskAnalysis.jsx";
 import Escrow from "./Escrow.jsx";
 import DealStatus from "./DealStatus.jsx";
+import { analyzeListingApi } from "./api.js";
 
 function BackgroundFX() {
   return (
@@ -32,6 +33,9 @@ export default function App() {
   const [screen, setScreen] = useState("landing");
   const [listingUrl, setListingUrl] = useState("");
   const [dealData, setDealData] = useState(null); // Store deal info from Escrow
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
 
   const buildMockAnalysis = () => {
     const riskScore = 45;
@@ -116,12 +120,50 @@ export default function App() {
                 className="w-full px-5 py-4 rounded-[18px] bg-black/60 border border-slate-800 focus:border-purple-500 outline-none text-sm shadow-inner shadow-black/40"
               />
               <button
-                onClick={() => {
-                  if (!listingUrl.trim()) {
+                onClick={async () => {
+                  const url = listingUrl.trim();
+                  if (!url) {
                     alert("Paste a listing URL first.");
                     return;
                   }
-                  setScreen("risk");
+
+                  setAnalysisLoading(true);
+                  setAnalysisError(null);
+                  try {
+                    const aiResult = await analyzeListingApi(url);
+
+                    // Map AI result into the shape expected by RiskAnalysis
+                    const riskScore = aiResult.risk_score ?? 45;
+                    const mapped = {
+                      title: aiResult.title || "Listing",
+                      subtitle: "Listed item",
+                      price: aiResult.price || 999,
+                      riskScore,
+                      riskLabel:
+                        riskScore < 30
+                          ? "Low Risk"
+                          : riskScore < 70
+                          ? "Medium Risk"
+                          : "High Risk",
+                      reasons: aiResult.reasons || ["AI could not extract detailed reasons."],
+                      suggestedQuestions:
+                        aiResult.suggested_questions || [
+                          "Can you provide proof of purchase?",
+                          "Why is the price below market value?",
+                          "What is your return policy?",
+                          "Can you provide additional photos of the item?",
+                        ],
+                      url,
+                    };
+
+                    setAnalysis(mapped);
+                    setScreen("risk");
+                  } catch (e) {
+                    console.error("Listing analysis failed:", e);
+                    setAnalysisError(e.message);
+                  } finally {
+                    setAnalysisLoading(false);
+                  }
                 }}
                 className="w-full py-3.5 rounded-[18px] bg-gradient-to-r from-purple-500 via-pink-500 to-sky-500 hover:from-sky-500 hover:via-pink-500 hover:to-purple-500 font-semibold text-sm shadow-lg shadow-purple-500/50 active:scale-[0.98] transition"
               >
@@ -162,8 +204,17 @@ export default function App() {
 
             {/* Demo note */}
             <p className="text-[11px] text-slate-500 text-center">
-              Demo mode · Uses Solana devnet · All data is mocked for UI only
+              Uses Solana devnet. AI analysis may be slow & approximate; double-check before buying.
             </p>
+
+            {analysisLoading && (
+              <p className="mt-2 text-[11px] text-amber-400 text-center">
+                Analyzing listing with AI…
+              </p>
+            )}
+            {analysisError && (
+              <p className="mt-2 text-[11px] text-red-400 text-center">{analysisError}</p>
+            )}
           </motion.div>
         </main>
       </div>
@@ -176,7 +227,7 @@ export default function App() {
       <div className="relative min-h-screen flex flex-col text-white">
         <BackgroundFX />
         <RiskAnalysis
-          data={buildMockAnalysis()}
+          data={analysis || buildMockAnalysis()}
           onBack={() => setScreen("landing")}
           onCreateDeal={() => setScreen("deal")}
         />
@@ -186,8 +237,6 @@ export default function App() {
 
   // ---------------- ESCROW ----------------
   if (screen === "deal") {
-    const analysis = buildMockAnalysis(); // reuse your existing function
-  
     return (
       <div className="relative min-h-screen flex flex-col text-white">
         <BackgroundFX />

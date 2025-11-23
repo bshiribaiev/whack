@@ -2,6 +2,29 @@ const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 console.log("API_URL configured:", API_URL);
 
+export async function analyzeListingApi(url) {
+  if (!API_URL) {
+    throw new Error("VITE_BACKEND_URL is not set in your frontend .env");
+  }
+
+  const res = await fetch(`${API_URL}/analyze-listing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!res.ok) {
+    let msg = `analyze-listing failed (${res.status})`;
+    try {
+      const err = await res.json();
+      if (err?.error) msg = err.error;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  return res.json();
+}
+
 export async function createDealApi({ buyerPubkey, sellerPubkey, amountSol, dealId, analysis }) {
   console.log("Calling createDealApi:", { buyerPubkey, sellerPubkey, amountSol, dealId });
   

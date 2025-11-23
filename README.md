@@ -9,3 +9,4 @@ mkdir -p /opt/shopchain
 cd /opt/shopchain
 git clone https://github.com/bshiribaiev/whack.git .
 
+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

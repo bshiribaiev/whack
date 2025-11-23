@@ -15,11 +15,11 @@
     "@google/generative-ai": "^0.24.1",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.84.0",
+    "axios": "^1.13.2",
     "bn.js": "^5.2.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "pg": "^8.16.3",
-    "playwright": "^1.56.1"
+    "pg": "^8.16.3"
   }
 }

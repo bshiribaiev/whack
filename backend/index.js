@@ -7,7 +7,7 @@ const anchor = require("@coral-xyz/anchor");
 const { PublicKey, SystemProgram, Transaction } = require("@solana/web3.js");
 const { Pool } = require("pg");
 const BN = require("bn.js");
-const { chromium } = require("playwright");
+const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // ---- Solana / Anchor setup ----
@@ -55,81 +55,54 @@ async function buildTx(instruction, payerPubkey) {
   return serialized.toString("base64");
 }
 
-// ---- Helper: scrape + summarize listing page ----
+// ---- Helper: scrape + summarize listing page (lightweight with axios) ----
 async function fetchListingSummary(url) {
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--disable-gpu"
-    ],
-  });
-
   try {
-    const context = await browser.newContext({
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
+    // Simple HTTP fetch - much lighter than Playwright
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 15000,
+      maxRedirects: 5,
     });
 
-    const page = await context.newPage();
+    const html = response.data;
+    
+    // Extract text content (strip HTML tags - basic approach)
+    const textOnly = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    // Block heavy resources
-    await page.route("**/*", (route) => {
-      const type = route.request().resourceType();
-      if (["image", "font", "media", "stylesheet"].includes(type)) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
-
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
-    await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
-
-    // Try to expand "see more" style buttons
-    try {
-      const buttons = await page.locator("div[role='button']").all();
-      for (const btn of buttons) {
-        await btn.evaluate((el) => {
-          const span = [...el.children].find(
-            (c) =>
-              c.tagName === "SPAN" &&
-              c.innerText.trim().toLowerCase() === "see more"
-          );
-          if (span) el.click();
-        });
-      }
-    } catch (_) {
-      // best-effort only
+    // Extract meta tags (Open Graph)
+    const metaTags = {};
+    const metaRegex = /<meta[^>]+property=["']og:([^"']+)["'][^>]+content=["']([^"']+)["'][^>]*>/gi;
+    let match;
+    while ((match = metaRegex.exec(html)) !== null) {
+      metaTags[`og:${match[1]}`] = match[2];
     }
 
-    // Give the page a moment to settle
-    await page.waitForTimeout(800);
-
-    const visibleText = await page.evaluate(() =>
-      document.body.innerText.replace(/\s+/g, " ").trim()
-    );
-
-    const metaTags = await page.evaluate(() => {
-      const metas = Array.from(
-        document.querySelectorAll("meta[property^='og:']")
-      );
-      const out = {};
-      metas.forEach((m) => {
-        out[m.getAttribute("property")] = m.getAttribute("content") || "";
-      });
-      return out;
-    });
+    // Also try alternate meta tag format
+    const metaRegex2 = /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:([^"']+)["'][^>]*>/gi;
+    while ((match = metaRegex2.exec(html)) !== null) {
+      metaTags[`og:${match[2]}`] = match[1];
+    }
 
     return {
-      visible_text: visibleText,
+      visible_text: textOnly.substring(0, 10000), // Limit to 10k chars
       meta_content: metaTags,
     };
-  } finally {
-    await browser.close(); // ALWAYS close, even on error
+  } catch (error) {
+    // If fetch fails, return minimal info
+    return {
+      visible_text: `Failed to fetch URL: ${error.message}`,
+      meta_content: {},
+    };
   }
 }
 

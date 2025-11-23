@@ -1,5 +1,7 @@
 # ShopChain — AI-Powered Safe Deals with Solana Escrow
 
+![ShopChain Walkthrough](walkthrough.gif)
+
 ## Inspiration
 
 Buying expensive items from strangers online — bikes, laptops, cameras, tickets, sneakers — always feels risky.  

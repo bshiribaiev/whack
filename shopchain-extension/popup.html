@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ShopChain Risk Scanner</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="app">
+      <h1>ShopChain Risk Scanner</h1>
+      <div id="platform" class="badge"></div>
+
+      <div class="field">
+        <div class="label">📦 Listing</div>
+        <div id="listingTitle" class="value">—</div>
+      </div>
+
+      <div class="field">
+        <div class="label">💰 Price</div>
+        <div id="listingPrice" class="value">—</div>
+      </div>
+
+      <div class="field">
+        <div class="label">⚠️ Risk Score</div>
+        <div id="riskScore" class="value">—</div>
+      </div>
+
+      <div class="block">
+        <div class="label">❓ Why?</div>
+        <ul id="whyList"></ul>
+      </div>
+
+      <div class="block">
+        <div class="label">✅ Why Not?</div>
+        <ul id="whyNotList"></ul>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <div class="buttons">
+        <button id="rescanBtn">Rescan page</button>
+        <button id="openWebBtn">Open in ShopChain</button>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

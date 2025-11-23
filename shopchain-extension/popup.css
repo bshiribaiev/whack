@@ -1,0 +1,103 @@
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    sans-serif;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+#app {
+  width: 320px;
+  padding: 12px 14px 14px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  margin-bottom: 8px;
+}
+
+.field {
+  margin-bottom: 8px;
+}
+
+.label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 2px;
+}
+
+.value {
+  font-size: 13px;
+  color: #e5e7eb;
+  word-break: break-word;
+}
+
+.block {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.block ul {
+  padding-left: 16px;
+  margin: 4px 0 0;
+}
+
+.block li {
+  font-size: 11px;
+  color: #d1d5db;
+  margin-bottom: 2px;
+}
+
+.status {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+button {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 0;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#rescanBtn {
+  background: #0ea5e9;
+  color: white;
+}
+
+#rescanBtn:hover {
+  background: #38bdf8;
+}
+
+#openWebBtn {
+  background: #111827;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+}
+
+#openWebBtn:hover {
+  background: #1f2937;
+}

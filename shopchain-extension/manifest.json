@@ -1,0 +1,79 @@
+{
+  "manifest_version": 3,
+  "name": "ShopChain Global Risk Scanner",
+  "version": "1.0.0",
+  "description": "Scan any online marketplace listing using ShopChain.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Scan listing with ShopChain"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["*://*/*"],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.ebay.com/*",
+        "*://*.ebay.co.uk/*",
+        "*://*.ebay.ca/*",
+        "*://*.ebay.de/*",
+        "*://*.ebay.fr/*",
+        "*://*.ebay.in/*",
+        "*://*.ebay.com.au/*",
+
+        "*://*.amazon.com/*",
+        "*://*.amazon.co.uk/*",
+        "*://*.amazon.ca/*",
+        "*://*.amazon.de/*",
+        "*://*.amazon.fr/*",
+        "*://*.amazon.in/*",
+        "*://*.amazon.it/*",
+        "*://*.amazon.es/*",
+        "*://*.amazon.com.au/*",
+
+        "*://*.facebook.com/marketplace/*",
+        "*://*.instagram.com/*",
+        "*://*.tiktok.com/*",
+
+        "*://*.aliexpress.com/*",
+        "*://*.alibaba.com/*",
+        "*://*.etsy.com/*",
+        "*://*.walmart.com/*",
+        "*://*.target.com/*",
+        "*://*.bestbuy.com/*",
+        "*://*.newegg.com/*",
+        "*://*.flipkart.com/*",
+
+        "*://*.shopee.sg/*",
+        "*://*.shopee.ph/*",
+        "*://*.shopee.tw/*",
+        "*://*.shopee.co.id/*",
+        "*://*.shopee.co.th/*",
+        "*://*.shopee.vn/*",
+
+        "*://*.mercari.com/*",
+        "*://*.poshmark.com/*",
+        "*://*.depop.com/*",
+        "*://*.stockx.com/*",
+        "*://*.goat.com/*",
+        "*://*.grailed.com/*",
+
+        "*://*.craigslist.org/*",
+
+        "*://*.olx.com/*",
+        "*://*.olx.in/*",
+        "*://*.olx.pl/*",
+        "*://*.olx.ro/*",
+
+        "*://*.carousell.com/*",
+        "*://*.carousell.sg/*"
+      ],
+      "js": ["contentScript.js"]
+    }
+  ]
+}

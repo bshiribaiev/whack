@@ -63,7 +63,7 @@ export default function App() {
   // ---------------- LANDING ----------------
   if (screen === "landing") {
     return (
-      <div className="relative min-h-screen flex flex-col text-white">
+     <div className="relative min-h-screen flex flex-col text-white">
         <BackgroundFX />
 
         {/* Top nav */}

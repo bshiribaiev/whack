@@ -5,6 +5,8 @@
   text-align: center;
 }
 
+
+
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -39,4 +41,9 @@
 
 .read-the-docs {
   color: #888;
+}
+.wallet-adapter-dropdown-list . wallet-adapter-dropdown-list-active{
+
+z-index:9999 !important;
+
 }

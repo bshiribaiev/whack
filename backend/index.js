@@ -59,70 +59,78 @@ async function buildTx(instruction, payerPubkey) {
 async function fetchListingSummary(url) {
   const browser = await chromium.launch({
     headless: true,
-    args: ["--disable-blink-features=AutomationControlled"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--disable-gpu"
+    ],
   });
 
-  const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
-  });
-
-  const page = await context.newPage();
-
-  // Block heavy resources
-  await page.route("**/*", (route) => {
-    const type = route.request().resourceType();
-    if (["image", "font", "media", "stylesheet"].includes(type)) {
-      route.abort();
-    } else {
-      route.continue();
-    }
-  });
-
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
-  await page.waitForLoadState("networkidle");
-
-  // Try to expand "see more" style buttons
   try {
-    const buttons = await page.locator("div[role='button']").all();
-    for (const btn of buttons) {
-      await btn.evaluate((el) => {
-        const span = [...el.children].find(
-          (c) =>
-            c.tagName === "SPAN" &&
-            c.innerText.trim().toLowerCase() === "see more"
-        );
-        if (span) el.click();
-      });
-    }
-  } catch (_) {
-    // best-effort only
-  }
-
-  // Give the page a moment to settle
-  await page.waitForTimeout(800);
-
-  const visibleText = await page.evaluate(() =>
-    document.body.innerText.replace(/\s+/g, " ").trim()
-  );
-
-  const metaTags = await page.evaluate(() => {
-    const metas = Array.from(
-      document.querySelectorAll("meta[property^='og:']")
-    );
-    const out = {};
-    metas.forEach((m) => {
-      out[m.getAttribute("property")] = m.getAttribute("content") || "";
+    const context = await browser.newContext({
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
     });
-    return out;
-  });
 
-  await browser.close();
+    const page = await context.newPage();
 
-  return {
-    visible_text: visibleText,
-    meta_content: metaTags,
-  };
+    // Block heavy resources
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "font", "media", "stylesheet"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+
+    // Try to expand "see more" style buttons
+    try {
+      const buttons = await page.locator("div[role='button']").all();
+      for (const btn of buttons) {
+        await btn.evaluate((el) => {
+          const span = [...el.children].find(
+            (c) =>
+              c.tagName === "SPAN" &&
+              c.innerText.trim().toLowerCase() === "see more"
+          );
+          if (span) el.click();
+        });
+      }
+    } catch (_) {
+      // best-effort only
+    }
+
+    // Give the page a moment to settle
+    await page.waitForTimeout(800);
+
+    const visibleText = await page.evaluate(() =>
+      document.body.innerText.replace(/\s+/g, " ").trim()
+    );
+
+    const metaTags = await page.evaluate(() => {
+      const metas = Array.from(
+        document.querySelectorAll("meta[property^='og:']")
+      );
+      const out = {};
+      metas.forEach((m) => {
+        out[m.getAttribute("property")] = m.getAttribute("content") || "";
+      });
+      return out;
+    });
+
+    return {
+      visible_text: visibleText,
+      meta_content: metaTags,
+    };
+  } finally {
+    await browser.close(); // ALWAYS close, even on error
+  }
 }
 
 // ---- Helper: call Gemini with summary ----

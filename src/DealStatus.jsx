@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -65,7 +65,6 @@ function LabelWithPill({ label, pill, color }) {
 }
 
 export default function DealStatus({ onBack }) {
-  // waiting -> funded -> shipped -> released
   const [stage, setStage] = useState("waiting");
 
   const handleFund = () => setStage("funded");
@@ -108,7 +107,29 @@ export default function DealStatus({ onBack }) {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center px-4 pb-10 pt-6">
+    <div className="flex-1 flex items-center justify-center px-4 pb-10 pt-6 relative">
+
+      {/* 🔥 ABSOLUTE ESCROW BANNER */}
+      <AnimatePresence>
+        {(stage === "funded" || stage === "shipped") && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.25 }}
+            className="absolute top-4 right-6 flex items-center gap-3 bg-black/40 border border-emerald-400/30 px-4 py-2 rounded-xl shadow-lg backdrop-blur-md z-50"
+          >
+            <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <p className="text-xs text-slate-200 font-medium">
+              900 USDC currently locked in escrow
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MAIN CARD */}
       <motion.div
         initial={{ opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
@@ -127,7 +148,7 @@ export default function DealStatus({ onBack }) {
           </p>
         </div>
 
-        {/* Summary */}
+        {/* Summary Section */}
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-slate-400 mb-1">
@@ -139,24 +160,12 @@ export default function DealStatus({ onBack }) {
                 : "Escrow active · waiting for confirmations"}
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              Demo logic only – in the real dApp, each step would be wired to
-              Solana program events.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <p className="text-xs text-slate-300">
-              900 USDC{" "}
-              {stage === "released"
-                ? "has been released to seller"
-                : "currently locked in escrow"}
+              Demo logic only – in real dApp, each step is synced to Solana program events.
             </p>
           </div>
         </div>
 
-        {/* Deal card with coin animation */}
+        {/* Deal Card */}
         <DealCard
           stage={stage}
           escrowLabel={escrowLabel}
@@ -166,9 +175,9 @@ export default function DealStatus({ onBack }) {
           onRelease={handleRelease}
         />
 
-        {/* Buyer / Seller status panel */}
+        {/* Buyer / Seller Panels */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-          {/* Buyer panel */}
+          {/* Buyer */}
           <div className="rounded-2xl bg-black/35 border border-white/10 px-5 py-4">
             <p className="text-xs uppercase tracking-[0.22em] text-sky-300 mb-2">
               Buyer
@@ -189,7 +198,7 @@ export default function DealStatus({ onBack }) {
             </div>
           </div>
 
-          {/* Seller panel */}
+          {/* Seller */}
           <div className="rounded-2xl bg-black/35 border border-white/10 px-5 py-4">
             <p className="text-xs uppercase tracking-[0.22em] text-violet-300 mb-2">
               Seller
@@ -237,8 +246,7 @@ export default function DealStatus({ onBack }) {
         </div>
 
         <p className="text-[11px] text-slate-500 text-center">
-          Demo only – replace buttons and pills with real Solana transactions
-          when the backend is ready.
+          Demo only – backend will replace buttons with real Solana transactions.
         </p>
       </motion.div>
     </div>
